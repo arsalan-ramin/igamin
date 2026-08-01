@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-head">
+    <h2 id="app-title">Application Details</h2>
+    <a class="back-link" href="/">Back to landscape</a>
+  </div>
+
+  <div id="app-meta" class="app-meta"></div>
+
+  <div class="details-grid">
+    <div>
+      <h3>Capabilities</h3>
+      <ul id="capabilities" class="result-list"></ul>
+    </div>
+    <div>
+      <h3>Dependencies</h3>
+      <ul id="dependencies" class="result-list"></ul>
+    </div>
+    <div>
+      <h3>Documents</h3>
+      <ul id="documents" class="result-list"></ul>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.APP_CONFIG = {
+    backendBaseUrl: "{{ backend_base_url }}",
+    appId: "{{ app_id }}"
+  };
+</script>
+<script src="{{ url_for('static', filename='js/details.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Architecture Landscape</h2>
+    <p>Click any application node in the Mermaid architecture graph to inspect and open details.</p>
+  </div>
+
+  <div class="diagram-wrap">
+    <div id="diagram-container" class="mermaid-canvas"></div>
+    <div id="diagram-fallback" class="diagram-fallback">
+      <h3>Unable to render Mermaid diagram</h3>
+      <p>Check backend availability and refresh the page.</p>
+    </div>
+  </div>
+
+  <div id="selected-app" class="selected-app" hidden>
+    <h3 id="selected-app-name">Selected Application</h3>
+    <p id="selected-app-summary"></p>
+    <div class="selected-meta">
+      <span id="selected-app-domain"></span>
+      <span id="selected-app-tags"></span>
+    </div>
+    <a id="selected-open-link" class="docs-link" href="#">Open details</a>
+  </div>
+</section>
+
+<section class="split-grid">
+  <article class="panel">
+    <div class="panel-head">
+      <h2>Architecture Search</h2>
+      <p>Search by application name, tags, or domain.</p>
+    </div>
+    <div class="search-row">
+      <input type="text" id="app-search" placeholder="Search applications..." />
+      <button id="search-button">Search</button>
+    </div>
+    <ul id="search-results" class="result-list"></ul>
+  </article>
+
+  <article class="panel">
+    <div class="panel-head">
+      <h2>Architecture Copilot</h2>
+      <p>Ask architecture-related questions from one place.</p>
+    </div>
+    <textarea id="copilot-question" rows="4" placeholder="How does Player Platform integrate with Sports Betting?"></textarea>
+    <button id="ask-button">Ask AI</button>
+    <div id="copilot-answer" class="copilot-answer"></div>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.APP_CONFIG = {
+    backendBaseUrl: "{{ backend_base_url }}"
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+{% endblock %}

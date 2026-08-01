@@ -1,0 +1,252 @@
+{
+  "applications": [
+    {
+      "id": "google-analytics",
+      "name": "Google Analytics",
+      "domain": "Player Device",
+      "short_description": "Collects digital engagement and channel metrics.",
+      "description": "Captures web and app user interactions to support performance, attribution, and funnel reporting.",
+      "tags": ["analytics", "tracking", "marketing"],
+      "capabilities": ["Event tracking", "Traffic analysis", "Acquisition funnel"],
+      "dependencies": ["spa-website", "adobe-campaign-cloud"],
+      "documents": ["doc-ga-01"],
+      "diagram": { "x": 7.8, "y": 16.5, "w": 13.5, "h": 7.0 }
+    },
+    {
+      "id": "paysafe",
+      "name": "Paysafe",
+      "domain": "Payments",
+      "short_description": "Deposit and payment processing integration.",
+      "description": "Handles payment transactions and payment method orchestration for player deposits.",
+      "tags": ["payments", "deposit"],
+      "capabilities": ["Payment tokenization", "Deposit authorization", "Payment status updates"],
+      "dependencies": ["player-platform", "lottery-gateway"],
+      "documents": ["doc-pay-01"],
+      "diagram": { "x": 22.0, "y": 16.5, "w": 10.8, "h": 7.0 }
+    },
+    {
+      "id": "canada-post",
+      "name": "Canada Post",
+      "domain": "Identity & Address",
+      "short_description": "Address validation and correction service.",
+      "description": "Validates and standardizes player address records during registration and profile updates.",
+      "tags": ["identity", "address", "compliance"],
+      "capabilities": ["Address validation", "Standardization", "Postal corrections"],
+      "dependencies": ["player-platform"],
+      "documents": ["doc-id-01"],
+      "diagram": { "x": 33.0, "y": 16.5, "w": 10.8, "h": 7.0 }
+    },
+    {
+      "id": "apple-store",
+      "name": "Apple App Store",
+      "domain": "Distribution",
+      "short_description": "iOS app distribution entry point.",
+      "description": "Supports iOS app publishing and player access to the native iGaming app experience.",
+      "tags": ["ios", "distribution"],
+      "capabilities": ["App distribution", "Store policy compliance"],
+      "dependencies": ["player-platform"],
+      "documents": ["doc-dist-01"],
+      "diagram": { "x": 53.8, "y": 16.5, "w": 11.2, "h": 7.0 }
+    },
+    {
+      "id": "google-play",
+      "name": "Google Play Store",
+      "domain": "Distribution",
+      "short_description": "Android app distribution entry point.",
+      "description": "Supports Android app publishing and player acquisition through mobile storefronts.",
+      "tags": ["android", "distribution"],
+      "capabilities": ["App distribution", "Release management"],
+      "dependencies": ["player-platform"],
+      "documents": ["doc-dist-02"],
+      "diagram": { "x": 65.8, "y": 16.5, "w": 11.2, "h": 7.0 }
+    },
+    {
+      "id": "sports-betting",
+      "name": "SBS Sports Betting",
+      "domain": "Sportsbook",
+      "short_description": "Sports betting experience and wager processing.",
+      "description": "Provides sportsbook functionality and bet lifecycle integration with core player account services.",
+      "tags": ["sportsbook", "betting"],
+      "capabilities": ["Bet placement", "Odds display", "Settlement updates"],
+      "dependencies": ["player-platform", "neustar"],
+      "documents": ["doc-sbs-01"],
+      "diagram": { "x": 77.8, "y": 16.5, "w": 12.0, "h": 7.0 }
+    },
+    {
+      "id": "player-platform",
+      "name": "Player Platform",
+      "domain": "Core Platform",
+      "short_description": "Central player account, wallet, and authorization services.",
+      "description": "The system-of-engagement core for player profile, wallet, registration, and cross-product orchestration.",
+      "tags": ["core", "wallet", "identity"],
+      "capabilities": ["Authentication", "Wallet", "Session management", "Registration"],
+      "dependencies": ["betbuddy", "bede-lotto", "spine-apis", "olp-utility"],
+      "documents": ["doc-core-01", "doc-core-02"],
+      "diagram": { "x": 39.5, "y": 42.0, "w": 16.5, "h": 8.0 }
+    },
+    {
+      "id": "betbuddy",
+      "name": "BetBuddy",
+      "domain": "Responsible Gaming",
+      "short_description": "Responsible gaming monitoring and controls.",
+      "description": "Monitors play patterns to support responsible gaming workflows and intervention signals.",
+      "tags": ["rg", "risk", "monitoring"],
+      "capabilities": ["Risk scoring", "Behavior monitoring", "Alert generation"],
+      "dependencies": ["player-platform"],
+      "documents": ["doc-rg-01"],
+      "diagram": { "x": 58.5, "y": 42.0, "w": 13.0, "h": 8.0 }
+    },
+    {
+      "id": "bede-lotto",
+      "name": "Bede Lotto",
+      "domain": "Lottery",
+      "short_description": "Lottery gameplay and ticket orchestration.",
+      "description": "Provides lottery transaction and gameplay integration for player-facing channels.",
+      "tags": ["lottery", "tickets"],
+      "capabilities": ["Ticket purchase", "Validation", "Draw data integration"],
+      "dependencies": ["lottery-gateway"],
+      "documents": ["doc-lotto-01"],
+      "diagram": { "x": 39.5, "y": 51.5, "w": 16.5, "h": 8.0 }
+    },
+    {
+      "id": "spine-apis",
+      "name": "SPINE APIs",
+      "domain": "Integration",
+      "short_description": "Integration API layer for upstream and downstream systems.",
+      "description": "Provides shared API contracts and orchestration glue across OLG digital platforms.",
+      "tags": ["apis", "integration", "middleware"],
+      "capabilities": ["Service mediation", "Contract versioning", "Routing"],
+      "dependencies": ["player-platform", "olga-p-link"],
+      "documents": ["doc-int-01"],
+      "diagram": { "x": 58.5, "y": 51.5, "w": 13.0, "h": 8.0 }
+    },
+    {
+      "id": "olga-p-link",
+      "name": "OLG Azure P-Link",
+      "domain": "Enterprise Integration",
+      "short_description": "Enterprise linkage for account changes and player updates.",
+      "description": "Exchanges account and player update events between platform services and enterprise systems.",
+      "tags": ["azure", "integration", "events"],
+      "capabilities": ["Event propagation", "Account updates", "Ban state sync"],
+      "dependencies": ["itrak", "moveit-sftp"],
+      "documents": ["doc-ent-01"],
+      "diagram": { "x": 61.2, "y": 61.0, "w": 12.5, "h": 8.0 }
+    },
+    {
+      "id": "ms-dynamics",
+      "name": "MS Dynamics",
+      "domain": "CRM",
+      "short_description": "CRM and service workflow integration endpoint.",
+      "description": "Supports customer management and service workflows integrated from platform incidents and events.",
+      "tags": ["crm", "service"],
+      "capabilities": ["Case management", "Customer workflow", "Support handoff"],
+      "dependencies": ["service-now", "freshservice"],
+      "documents": ["doc-crm-01"],
+      "diagram": { "x": 89.0, "y": 28.5, "w": 9.5, "h": 7.0 }
+    }
+  ],
+  "relationships": [
+    { "source": "google-analytics", "target": "spa-website", "relation": "collects-events-from" },
+    { "source": "paysafe", "target": "player-platform", "relation": "authorizes-funding" },
+    { "source": "canada-post", "target": "player-platform", "relation": "validates-address" },
+    { "source": "sports-betting", "target": "player-platform", "relation": "authorizes-and-funds-bets" },
+    { "source": "sports-betting", "target": "betbuddy", "relation": "sends-behavior-signals" },
+    { "source": "player-platform", "target": "bede-lotto", "relation": "orchestrates-lottery" },
+    { "source": "player-platform", "target": "spine-apis", "relation": "calls-api-layer" },
+    { "source": "spine-apis", "target": "olga-p-link", "relation": "propagates-account-events" },
+    { "source": "olga-p-link", "target": "ms-dynamics", "relation": "sends-player-updates" }
+  ],
+  "documents": [
+    {
+      "id": "doc-core-01",
+      "application_id": "player-platform",
+      "title": "Player Platform High-Level Design",
+      "summary": "Overview of player account domain, wallet boundaries, and integration entry points.",
+      "tags": ["hld", "core", "wallet"]
+    },
+    {
+      "id": "doc-core-02",
+      "application_id": "player-platform",
+      "title": "Authentication and Registration Flows",
+      "summary": "Sequence documentation for sign-up, login, profile update, and session lifecycle.",
+      "tags": ["auth", "registration", "sequence"]
+    },
+    {
+      "id": "doc-lotto-01",
+      "application_id": "bede-lotto",
+      "title": "Lottery Transaction Integration",
+      "summary": "Describes buy, cancel, and validate ticket workflow with downstream services.",
+      "tags": ["lottery", "transactions"]
+    },
+    {
+      "id": "doc-rg-01",
+      "application_id": "betbuddy",
+      "title": "Responsible Gaming Signal Model",
+      "summary": "Defines play behavior signals and thresholds used for player protection controls.",
+      "tags": ["rg", "signals", "risk"]
+    },
+    {
+      "id": "doc-int-01",
+      "application_id": "spine-apis",
+      "title": "SPINE API Contract Catalog",
+      "summary": "Contract list, ownership, and deprecation policy for shared integration APIs.",
+      "tags": ["api", "contracts", "integration"]
+    },
+    {
+      "id": "doc-ent-01",
+      "application_id": "olga-p-link",
+      "title": "Enterprise Event Routing",
+      "summary": "Account changes and player update events flowing into enterprise services.",
+      "tags": ["events", "enterprise", "routing"]
+    },
+    {
+      "id": "doc-crm-01",
+      "application_id": "ms-dynamics",
+      "title": "CRM Case and Incident Integration",
+      "summary": "Case synchronization architecture with support platforms.",
+      "tags": ["crm", "incidents", "support"]
+    },
+    {
+      "id": "doc-ga-01",
+      "application_id": "google-analytics",
+      "title": "Digital Analytics Tracking Plan",
+      "summary": "Tagging model and KPI mapping used in architecture reporting.",
+      "tags": ["analytics", "tracking"]
+    },
+    {
+      "id": "doc-pay-01",
+      "application_id": "paysafe",
+      "title": "Payments Integration Overview",
+      "summary": "Transaction lifecycle, retry model, and callback behavior for deposits.",
+      "tags": ["payments", "deposits"]
+    },
+    {
+      "id": "doc-id-01",
+      "application_id": "canada-post",
+      "title": "Address Validation Service Contract",
+      "summary": "Request and response contract for profile address correction.",
+      "tags": ["identity", "address", "contract"]
+    },
+    {
+      "id": "doc-dist-01",
+      "application_id": "apple-store",
+      "title": "iOS Distribution Notes",
+      "summary": "Release and policy compliance notes for the iOS experience.",
+      "tags": ["ios", "distribution"]
+    },
+    {
+      "id": "doc-dist-02",
+      "application_id": "google-play",
+      "title": "Android Distribution Notes",
+      "summary": "Play Store release management and build promotion process.",
+      "tags": ["android", "distribution"]
+    },
+    {
+      "id": "doc-sbs-01",
+      "application_id": "sports-betting",
+      "title": "Sportsbook Integration Pattern",
+      "summary": "Bet lifecycle integration and settlement event handling.",
+      "tags": ["sportsbook", "bets"]
+    }
+  ]
+}

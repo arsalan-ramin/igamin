@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OLG iGaming Architecture Knowledge Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div>
+        <h1>OLG iGaming Architecture Knowledge Platform</h1>
+        <p>Visual architecture exploration with search, metadata, and AI assistance.</p>
+      </div>
+      <a class="docs-link" href="{{ backend_base_url }}/docs" target="_blank" rel="noreferrer">API Docs</a>
+    </header>
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <span>Architecture repository starter experience</span>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>
