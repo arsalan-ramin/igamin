@@ -65,9 +65,18 @@ main {
   box-shadow: 0 10px 24px rgba(18, 49, 40, 0.07);
 }
 
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
 .panel-head h2 {
   margin: 0;
   font-size: 1.15rem;
+  flex: 1;
 }
 
 .panel-head p {
@@ -78,36 +87,122 @@ main {
 .diagram-wrap {
   margin-top: 0.8rem;
   border-radius: 12px;
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid var(--line);
-  background: #f8fffc;
-  min-height: 380px;
+  background: linear-gradient(180deg, #f8fffc 0%, #edf7f3 100%);
+  min-height: 420px;
 }
 
-.mermaid-canvas {
+.diagram-canvas {
   display: none;
-  min-height: 380px;
-  padding: 0.7rem;
+  min-height: 420px;
+  padding: 0.75rem;
+  background: radial-gradient(circle at top left, rgba(0, 127, 109, 0.14), transparent 26%);
 }
 
-.mermaid-canvas.ready {
+.diagram-canvas.ready {
   display: block;
 }
 
-.mermaid-canvas svg {
+.diagram-canvas svg {
   width: 100%;
-  min-height: 340px;
+  height: 620px;
+  display: block;
 }
 
-.mermaid-canvas g.node {
+.diagram-canvas .edge {
+  fill: none;
+  stroke: #8fb9a9;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  opacity: 0.7;
+  transition: opacity 0.2s ease, stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.diagram-canvas .edge.active {
+  stroke: #0d7b69;
+  stroke-width: 3.2;
+  opacity: 1;
+  stroke-dasharray: 8 6;
+  animation: edge-flow 1.2s linear infinite;
+}
+
+.diagram-canvas .edge-label-group {
+  pointer-events: none;
+}
+
+.diagram-canvas .edge-label-bg {
+  fill: rgba(255, 255, 255, 0.97);
+  stroke: rgba(13, 123, 105, 0.35);
+  stroke-width: 1.2px;
+}
+
+.diagram-canvas .edge-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: #0a5f52;
+}
+
+.diagram-canvas .edge.dimmed {
+  opacity: 0.2;
+}
+
+.diagram-canvas .node {
   cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-.mermaid-canvas g.node.is-selected rect,
-.mermaid-canvas g.node.is-selected polygon,
-.mermaid-canvas g.node.is-selected path {
-  stroke: #d16600 !important;
-  stroke-width: 3px !important;
+.diagram-canvas .node rect {
+  fill: #f2f8f5;
+  stroke: #7aa59a;
+  stroke-width: 1.6;
+  rx: 16;
+  ry: 16;
+  transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
+}
+
+.diagram-canvas .node .node-pill {
+  fill: #0f7c6b;
+  opacity: 0.82;
+}
+
+.diagram-canvas .node text {
+  font-size: 14px;
+  fill: #143a31;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.diagram-canvas .node .node-subtext {
+  font-size: 11px;
+  font-weight: 500;
+  fill: #4d6a60;
+}
+
+.diagram-canvas .node.active rect {
+  fill: #ffffff;
+  stroke: #0f7c6b;
+  stroke-width: 2.2;
+  filter: drop-shadow(0 8px 18px rgba(15, 124, 107, 0.18));
+}
+
+.diagram-canvas .node.selected rect {
+  fill: #0f7c6b;
+  stroke: #0a5949;
+  stroke-width: 3px;
+  filter: drop-shadow(0 10px 20px rgba(15, 124, 107, 0.24));
+}
+
+.diagram-canvas .node.selected text {
+  fill: #ffffff;
+}
+
+.diagram-canvas .node.selected .node-subtext {
+  fill: #ebf9f6;
+}
+
+.diagram-canvas .node.dimmed {
+  opacity: 0.4;
 }
 
 .diagram-fallback {
@@ -192,6 +287,15 @@ button {
 
 .result-list li {
   margin-bottom: 0.7rem;
+  padding: 0.6rem;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.result-list li:hover {
+  background-color: var(--accent-soft);
+  box-shadow: 0 2px 8px rgba(0, 127, 109, 0.15);
 }
 
 .result-list p {
@@ -227,6 +331,12 @@ button {
 .site-footer {
   padding: 0.8rem 1.4rem 1.4rem;
   color: var(--muted);
+}
+
+@keyframes edge-flow {
+  to {
+    stroke-dashoffset: -28;
+  }
 }
 
 @media (max-width: 900px) {

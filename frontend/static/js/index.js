@@ -16,8 +16,9 @@ const questionInput = document.getElementById("copilot-question");
 const answerContainer = document.getElementById("copilot-answer");
 
 const appById = new Map();
-const mermaidNodeMeta = new Map();
-let currentSelectedNodeKey = null;
+const graphNodeMeta = new Map();
+let currentGraphData = { nodes: [], edges: [] };
+let currentSelectedNodeId = null;
 
 async function fetchApplications(query = "") {
   const url = new URL(`${backendBaseUrl}/api/applications`);
@@ -47,14 +48,6 @@ async function fetchApplicationDetail(id) {
   return response.json();
 }
 
-function sanitizeNodeId(appId) {
-  return `app_${appId.replace(/[^a-zA-Z0-9_]/g, "_")}`;
-}
-
-function makeExternalNodeId(rawId) {
-  return `ext_${rawId.replace(/[^a-zA-Z0-9_]/g, "_")}`;
-}
-
 function toTitleFromSlug(value) {
   return value
     .split("-")
@@ -62,120 +55,16 @@ function toTitleFromSlug(value) {
     .join(" ");
 }
 
-function escapeMermaidLabel(text) {
-  return String(text).replace(/"/g, "\\\"");
+function escapeXml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;");
 }
 
-function classForApp(app) {
-  const domain = (app.domain || "").toLowerCase();
-  if (domain.includes("core")) return "knownCore";
-  if (domain.includes("lottery")) return "knownLottery";
-  if (domain.includes("integration") || domain.includes("enterprise")) return "knownIntegration";
-  if (domain.includes("payments") || domain.includes("identity") || domain.includes("distribution")) return "knownGateway";
-  if (domain.includes("sportsbook")) return "knownSports";
-  if (domain.includes("crm")) return "knownExternal";
-  return "knownGeneral";
-}
-
-function renderSelectedApplication(appId) {
-  const app = appById.get(appId);
-  if (!app) {
-    return;
-  }
-
-  currentSelectedNodeKey = sanitizeNodeId(appId);
-  selectedAppPanel.hidden = false;
-  selectedAppName.textContent = app.name;
-  selectedAppSummary.textContent = app.description || app.short_description;
-  selectedAppDomain.textContent = `Domain: ${app.domain}`;
-  selectedAppTags.textContent = `Tags: ${(app.tags || []).join(", ") || "None"}`;
-  selectedOpenLink.href = `/applications/${app.id}`;
-  selectedOpenLink.hidden = false;
-  selectedOpenLink.textContent = "Open details";
-}
-
-function renderSelectedExternal(nodeMeta) {
-  currentSelectedNodeKey = nodeMeta.nodeId;
-  selectedAppPanel.hidden = false;
-  selectedAppName.textContent = nodeMeta.displayName;
-  selectedAppSummary.textContent =
-    "This is an external or supporting system shown in the architecture diagram.";
-  selectedAppDomain.textContent = "Domain: External/Supporting Component";
-  selectedAppTags.textContent = `Component key: ${nodeMeta.id}`;
-  selectedOpenLink.hidden = true;
-}
-
-function highlightSelectedNode() {
-  const svg = diagramContainer.querySelector("svg");
-  if (!svg) {
-    return;
-  }
-
-  const nodeGroups = svg.querySelectorAll("g.node");
-
-  nodeGroups.forEach((group) => {
-    group.classList.remove("is-selected");
-    if (currentSelectedNodeKey && group.id.includes(currentSelectedNodeKey)) {
-      group.classList.add("is-selected");
-    }
-  });
-}
-
-function nodeMetaFromRenderedNode(nodeGroupId) {
-  for (const [mermaidNodeId, nodeMeta] of mermaidNodeMeta.entries()) {
-    if (nodeGroupId.includes(mermaidNodeId)) {
-      return nodeMeta;
-    }
-  }
-  return null;
-}
-
-function bindDiagramNodeEvents() {
-  const svg = diagramContainer.querySelector("svg");
-  if (!svg) {
-    return;
-  }
-
-  svg.querySelectorAll("g.node").forEach((group) => {
-    group.addEventListener("click", () => {
-      const nodeMeta = nodeMetaFromRenderedNode(group.id);
-      if (!nodeMeta) {
-        return;
-      }
-
-      if (nodeMeta.kind === "app") {
-        renderSelectedApplication(nodeMeta.id);
-      } else {
-        renderSelectedExternal(nodeMeta);
-      }
-
-      highlightSelectedNode();
-    });
-  });
-}
-
-function buildMermaidDefinition(applications, relationships) {
-  mermaidNodeMeta.clear();
-
-  const lines = [
-    "flowchart TB",
-    "classDef knownGeneral fill:#d9efe8,stroke:#3b7f71,stroke-width:1.2px,color:#143a31;",
-    "classDef knownCore fill:#5ea75f,color:#ffffff,stroke:#2f6e30,stroke-width:1.5px;",
-    "classDef knownLottery fill:#4f57a8,color:#ffffff,stroke:#2f3577,stroke-width:1.5px;",
-    "classDef knownIntegration fill:#3d6da8,color:#ffffff,stroke:#294f7b,stroke-width:1.5px;",
-    "classDef knownGateway fill:#8e3f35,color:#ffffff,stroke:#6c2e27,stroke-width:1.4px;",
-    "classDef knownSports fill:#cd7ca7,color:#ffffff,stroke:#9d5f80,stroke-width:1.4px;",
-    "classDef knownExternal fill:#b45c94,color:#ffffff,stroke:#84406c,stroke-width:1.4px;",
-    "classDef external fill:#d7ecff,stroke:#4d7ea6,stroke-dasharray: 5 3,color:#1f4969;",
-    "classDef zone fill:#fff6cf,stroke:#d3c98f,stroke-dasharray: 4 3,color:#5f5842;"
-  ];
-
-  const appMap = new Map(applications.map((app) => [app.id, app]));
-  const relMap = new Map(
-    relationships.map((rel) => [`${rel.source}->${rel.target}`, rel.relation])
-  );
-
-  const externalNodeLabels = {
+function buildNodeLabel(id, fallback = "Component") {
+  const labels = {
     "adobe-campaign-cloud": "Adobe Campaign Cloud",
     "spa-website": "SPA Website",
     "freshservice": "FreshService",
@@ -193,164 +82,299 @@ function buildMermaidDefinition(applications, relationships) {
     "sftp-file-share": "File Share"
   };
 
-  const getKnownNode = (id) => {
-    const app = appMap.get(id);
-    if (!app) return null;
-    const nodeId = sanitizeNodeId(app.id);
-    const label = escapeMermaidLabel(app.name);
-    mermaidNodeMeta.set(nodeId, {
-      kind: "app",
-      id: app.id,
-      nodeId,
-      displayName: app.name
-    });
-    return { nodeId, label, cssClass: classForApp(app) };
-  };
-
-  const getExternalNode = (id) => {
-    const nodeId = makeExternalNodeId(id);
-    const displayName = externalNodeLabels[id] || toTitleFromSlug(id);
-    const label = escapeMermaidLabel(displayName);
-    mermaidNodeMeta.set(nodeId, {
-      kind: "external",
-      id,
-      nodeId,
-      displayName
-    });
-    return { nodeId, label };
-  };
-
-  const nodeDecl = new Set();
-  const ensureNode = (nodeId, label, cssClass) => {
-    if (!nodeDecl.has(nodeId)) {
-      lines.push(`${nodeId}["${label}"]`);
-      lines.push(`class ${nodeId} ${cssClass};`);
-      nodeDecl.add(nodeId);
-    }
-  };
-
-  lines.push("subgraph zone_player_device[Player Device]");
-  [
-    "google-analytics",
-    "paysafe",
-    "canada-post",
-    "apple-store",
-    "google-play",
-    "sports-betting"
-  ].forEach((id) => {
-    const node = getKnownNode(id);
-    if (node) ensureNode(node.nodeId, node.label, node.cssClass);
-  });
-  lines.push("end");
-
-  lines.push("subgraph zone_player_platform[Player Platform]");
-  ["player-platform", "betbuddy", "bede-lotto", "spine-apis"].forEach((id) => {
-    const node = getKnownNode(id);
-    if (node) ensureNode(node.nodeId, node.label, node.cssClass);
-  });
-  const olpm = getExternalNode("olp-utility");
-  ensureNode(olpm.nodeId, olpm.label, "external");
-  lines.push("end");
-
-  lines.push("subgraph zone_lottery_services[Lottery Services Platform]");
-  ["corporate-location-finder", "retail-location-finder", "websphere-public-data"].forEach((id) => {
-    const node = getExternalNode(id);
-    ensureNode(node.nodeId, node.label, "external");
-  });
-  lines.push("end");
-
-  lines.push("subgraph zone_lottery_app[Lottery Application]");
-  ["lottery-gateway", "lottery-transaction-services"].forEach((id) => {
-    const node = getExternalNode(id);
-    ensureNode(node.nodeId, node.label, "external");
-  });
-  lines.push("end");
-
-  lines.push("subgraph zone_reporting[Reporting Platform]");
-  ["freshservice", "service-now"].forEach((id) => {
-    const node = getExternalNode(id);
-    ensureNode(node.nodeId, node.label, "external");
-  });
-  lines.push("end");
-
-  lines.push("subgraph zone_enterprise[Enterprise and Operations]");
-  const pLink = getKnownNode("olga-p-link");
-  if (pLink) ensureNode(pLink.nodeId, pLink.label, pLink.cssClass);
-  const msDynamics = getKnownNode("ms-dynamics");
-  if (msDynamics) ensureNode(msDynamics.nodeId, msDynamics.label, msDynamics.cssClass);
-  ["itrak", "moveit-sftp", "pas-db-app", "pas-esb", "sftp-file-share"].forEach((id) => {
-    const node = getExternalNode(id);
-    ensureNode(node.nodeId, node.label, "external");
-  });
-  lines.push("end");
-
-  [
-    ["google-analytics", "spa-website"],
-    ["paysafe", "player-platform"],
-    ["canada-post", "player-platform"],
-    ["sports-betting", "player-platform"],
-    ["sports-betting", "betbuddy"],
-    ["player-platform", "bede-lotto"],
-    ["player-platform", "spine-apis"],
-    ["spine-apis", "olga-p-link"],
-    ["olga-p-link", "ms-dynamics"],
-    ["google-analytics", "adobe-campaign-cloud"],
-    ["bede-lotto", "lottery-gateway"],
-    ["lottery-gateway", "lottery-transaction-services"],
-    ["olga-p-link", "itrak"],
-    ["olga-p-link", "moveit-sftp"],
-    ["freshservice", "service-now"],
-    ["service-now", "ms-dynamics"]
-  ].forEach(([source, target]) => {
-    const sourceNode = appMap.has(source)
-      ? sanitizeNodeId(source)
-      : makeExternalNodeId(source);
-    const targetNode = appMap.has(target)
-      ? sanitizeNodeId(target)
-      : makeExternalNodeId(target);
-
-    if (!nodeDecl.has(sourceNode)) {
-      const external = getExternalNode(source);
-      ensureNode(sourceNode, external.label, "external");
-    }
-    if (!nodeDecl.has(targetNode)) {
-      const external = getExternalNode(target);
-      ensureNode(targetNode, external.label, "external");
-    }
-
-    const key = `${source}->${target}`;
-    const label = relMap.get(key) || "integrates";
-    lines.push(`${sourceNode} -->|${escapeMermaidLabel(label)}| ${targetNode}`);
-  });
-
-  lines.push("class zone_player_device,zone_player_platform,zone_lottery_services,zone_lottery_app,zone_reporting,zone_enterprise zone;");
-
-  return lines.join("\n");
+  return labels[id] || fallback;
 }
 
-async function renderMermaidArchitecture(applications, relationships) {
-  const graph = buildMermaidDefinition(applications, relationships);
+function buildLayoutPositions() {
+  // Left-to-right flow: Inputs (left) → Player Platform (center) → Outputs (right)
+  // Using full canvas space: 1150 wide x 800 tall
+  // Minimum spacing: 100px between node centers to avoid overlap (nodes are 62px tall)
+  return {
+    // LEFT: Input/Source Systems (x: 130, y: evenly distributed)
+    "google-analytics": { x: 130, y: 70 },
+    "adobe-campaign-cloud": { x: 130, y: 160 },
+    "spa-website": { x: 130, y: 250 },
+    "apple-store": { x: 130, y: 340 },
+    "google-play": { x: 130, y: 430 },
+    "paysafe": { x: 130, y: 520 },
+    "canada-post": { x: 130, y: 610 },
 
-  mermaid.initialize({
-    startOnLoad: false,
-    securityLevel: "loose",
-    theme: "base",
-    flowchart: {
-      useMaxWidth: true,
-      curve: "basis"
-    },
-    themeVariables: {
-      fontFamily: "Trebuchet MS, Segoe UI, sans-serif",
-      primaryTextColor: "#113229",
-      lineColor: "#1a7a69",
-      edgeLabelBackground: "#f3f9f6"
+    // CENTER: Core Platform (x: 450, y: middle)
+    "player-platform": { x: 450, y: 360 },
+
+    // RIGHT-MAIN: Immediate Outputs (x: 750, y: evenly spaced)
+    "sports-betting": { x: 750, y: 70 },
+    "betbuddy": { x: 750, y: 160 },
+    "bede-lotto": { x: 750, y: 250 },
+    "spine-apis": { x: 750, y: 430 },
+
+    // RIGHT-ENTERPRISE: Enterprise Integration (x: 920-1020)
+    "olga-p-link": { x: 920, y: 160 },
+    "ms-dynamics": { x: 1020, y: 340 },
+
+    // Supporting/Auxiliary systems on RIGHT-BOTTOM area (spread across x: 750-1050, y: 520-710)
+    "olp-utility": { x: 450, y: 70 },
+    "lottery-gateway": { x: 920, y: 70 },
+    "lottery-transaction-services": { x: 1020, y: 70 },
+    
+    // Lower tier supporting systems (y: 520+)
+    "corporate-location-finder": { x: 600, y: 530 },
+    "retail-location-finder": { x: 750, y: 530 },
+    "websphere-public-data": { x: 900, y: 530 },
+    "itrak": { x: 750, y: 620 },
+    "moveit-sftp": { x: 900, y: 620 },
+    "pas-db-app": { x: 1050, y: 620 },
+    "freshservice": { x: 750, y: 710 },
+    "service-now": { x: 900, y: 710 },
+    "pas-esb": { x: 1050, y: 710 }
+  };
+}
+
+function formatEdgeLabel(value) {
+  return String(value || "integrates")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function buildGraphData(applications, relationships) {
+  const positions = buildLayoutPositions();
+  const appMap = new Map(applications.map((app) => [app.id, app]));
+  const nodes = [];
+  const nodeById = new Map();
+
+  const ensureNode = (id) => {
+    if (nodeById.has(id)) {
+      return nodeById.get(id);
     }
+
+    const app = appMap.get(id);
+    const label = app ? app.name : buildNodeLabel(id, toTitleFromSlug(id));
+    const kind = app ? "app" : "external";
+    const basePosition = positions[id] || null;
+    const index = nodes.length;
+    const node = {
+      id,
+      kind,
+      label,
+      domain: app?.domain || "Supporting System",
+      x: basePosition?.x || 180 + (index % 6) * 140,
+      y: basePosition?.y || 120 + Math.floor(index / 6) * 110
+    };
+    nodes.push(node);
+    nodeById.set(id, node);
+    return node;
+  };
+
+  applications.forEach((app) => ensureNode(app.id));
+
+  relationships.forEach((relationship) => {
+    ensureNode(relationship.source);
+    ensureNode(relationship.target);
   });
 
-  const renderResult = await mermaid.render("architecture-mermaid", graph);
-  diagramContainer.innerHTML = renderResult.svg;
+  const edges = relationships.map((relationship) => ({
+    id: `${relationship.source}->${relationship.target}`,
+    source: relationship.source,
+    target: relationship.target,
+    label: formatEdgeLabel(relationship.relation || "integrates")
+  }));
+
+  return { nodes, edges };
+}
+
+function renderSelectedApplication(appId) {
+  const app = appById.get(appId);
+  if (!app) {
+    return;
+  }
+
+  currentSelectedNodeId = appId;
+  selectedAppPanel.hidden = false;
+  selectedAppName.textContent = app.name;
+  selectedAppSummary.textContent = app.description || app.short_description;
+  selectedAppDomain.textContent = `Domain: ${app.domain}`;
+  selectedAppTags.textContent = `Tags: ${(app.tags || []).join(", ") || "None"}`;
+  selectedOpenLink.href = `/applications/${app.id}`;
+  selectedOpenLink.hidden = false;
+  selectedOpenLink.textContent = "Open details";
+}
+
+function renderSelectedExternal(nodeMeta) {
+  currentSelectedNodeId = nodeMeta.id;
+  selectedAppPanel.hidden = false;
+  selectedAppName.textContent = nodeMeta.label;
+  selectedAppSummary.textContent =
+    "This is an external or supporting system shown in the architecture diagram.";
+  selectedAppDomain.textContent = "Domain: External/Supporting Component";
+  selectedAppTags.textContent = `Component key: ${nodeMeta.id}`;
+  selectedOpenLink.hidden = true;
+}
+
+function renderGraph(graphData, selectedNodeId = null) {
+  graphNodeMeta.clear();
+  graphData.nodes.forEach((node) => graphNodeMeta.set(node.id, node));
+
+  const activeConnections = new Set();
+  const activeNodes = new Set();
+
+  if (selectedNodeId) {
+    activeNodes.add(selectedNodeId);
+    graphData.edges.forEach((edge) => {
+      if (edge.source === selectedNodeId || edge.target === selectedNodeId) {
+        activeConnections.add(edge.id);
+        activeNodes.add(edge.source);
+        activeNodes.add(edge.target);
+      }
+    });
+  }
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 1150 800");
+
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  defs.innerHTML = `
+    <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#0d7b69"></path>
+    </marker>
+  `;
+  svg.appendChild(defs);
+
+  const edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  edgeLayer.setAttribute("class", "edge-layer");
+
+  graphData.edges.forEach((edge) => {
+    const source = graphNodeMeta.get(edge.source);
+    const target = graphNodeMeta.get(edge.target);
+    if (!source || !target) {
+      return;
+    }
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const dx = target.x - source.x;
+    const dy = target.y - source.y;
+    const curveOffset = Math.min(120, Math.max(40, Math.abs(dx) * 0.18));
+    const c1x = source.x + dx * 0.35;
+    const c1y = source.y + dy * 0.15 - curveOffset;
+    const c2x = source.x + dx * 0.65;
+    const c2y = source.y + dy * 0.15 + curveOffset;
+    const pathData = `M ${source.x} ${source.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${target.x} ${target.y}`;
+    path.setAttribute("d", pathData);
+    path.setAttribute("class", `edge ${activeConnections.has(edge.id) ? "active" : selectedNodeId ? "dimmed" : ""}`.trim());
+    path.setAttribute("marker-end", "url(#arrowhead)");
+    edgeLayer.appendChild(path);
+
+    const labelGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    labelGroup.setAttribute("class", "edge-label-group");
+
+    const labelText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    labelText.setAttribute("class", "edge-label");
+    labelText.setAttribute("text-anchor", "middle");
+    labelText.setAttribute("dominant-baseline", "middle");
+    labelText.textContent = escapeXml(edge.label);
+
+    const labelWidth = Math.max(100, edge.label.length * 7 + 28);
+    const labelHeight = 28;
+    const labelPathLength = path.getTotalLength();
+    const midLength = labelPathLength / 2;
+    
+    const labelPoint = path.getPointAtLength(midLength);
+    const nearbyDist = Math.min(30, labelPathLength / 8);
+    const beforePoint = path.getPointAtLength(Math.max(0, midLength - nearbyDist));
+    const afterPoint = path.getPointAtLength(Math.min(labelPathLength, midLength + nearbyDist));
+    
+    // Calculate tangent direction
+    const tangentX = afterPoint.x - beforePoint.x;
+    const tangentY = afterPoint.y - beforePoint.y;
+    const tangentLen = Math.sqrt(tangentX * tangentX + tangentY * tangentY);
+    
+    // Perpendicular direction (rotate 90 degrees)
+    const perpX = tangentLen > 0 ? -tangentY / tangentLen : 0;
+    const perpY = tangentLen > 0 ? tangentX / tangentLen : 0;
+    
+    // Moderate offset to keep labels near the edge
+    const offsetDist = 24;
+    const labelX = labelPoint.x + perpX * offsetDist;
+    const labelY = labelPoint.y + perpY * offsetDist;
+
+    const labelBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    labelBg.setAttribute("class", "edge-label-bg");
+    labelBg.setAttribute("x", labelX - labelWidth / 2);
+    labelBg.setAttribute("y", labelY - labelHeight / 2);
+    labelBg.setAttribute("width", labelWidth);
+    labelBg.setAttribute("height", labelHeight);
+    labelBg.setAttribute("rx", 12);
+    labelBg.setAttribute("ry", 12);
+
+    labelText.setAttribute("x", labelX);
+    labelText.setAttribute("y", labelY + 1);
+
+    labelGroup.appendChild(labelBg);
+    labelGroup.appendChild(labelText);
+    edgeLayer.appendChild(labelGroup);
+  });
+
+  svg.appendChild(edgeLayer);
+
+  const nodeLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  nodeLayer.setAttribute("class", "node-layer");
+
+  graphData.nodes.forEach((node) => {
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("class", `node ${selectedNodeId === node.id ? "selected" : selectedNodeId && activeNodes.has(node.id) ? "active" : selectedNodeId ? "dimmed" : ""}`.trim());
+    group.setAttribute("data-node-id", node.id);
+
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    const width = 170;
+    const height = 62;
+    rect.setAttribute("x", node.x - width / 2);
+    rect.setAttribute("y", node.y - height / 2);
+    rect.setAttribute("width", width);
+    rect.setAttribute("height", height);
+    group.appendChild(rect);
+
+    const pill = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    pill.setAttribute("class", "node-pill");
+    pill.setAttribute("x", node.x - width / 2 + 10);
+    pill.setAttribute("y", node.y - height / 2 + 10);
+    pill.setAttribute("width", 10);
+    pill.setAttribute("height", 10);
+    pill.setAttribute("rx", 3);
+    pill.setAttribute("ry", 3);
+    group.appendChild(pill);
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", node.x);
+    label.setAttribute("y", node.y - 4);
+    label.setAttribute("text-anchor", "middle");
+    label.textContent = escapeXml(node.label.length > 22 ? `${node.label.slice(0, 22)}…` : node.label);
+    group.appendChild(label);
+
+    const sublabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    sublabel.setAttribute("x", node.x);
+    sublabel.setAttribute("y", node.y + 16);
+    sublabel.setAttribute("class", "node-subtext");
+    sublabel.setAttribute("text-anchor", "middle");
+    sublabel.textContent = escapeXml(node.kind === "app" ? node.domain : "Supporting system");
+    group.appendChild(sublabel);
+
+    group.addEventListener("click", () => {
+      if (node.kind === "app") {
+        renderSelectedApplication(node.id);
+      } else {
+        renderSelectedExternal(node);
+      }
+      renderGraph(currentGraphData, node.id);
+    });
+
+    nodeLayer.appendChild(group);
+  });
+
+  svg.appendChild(nodeLayer);
+  diagramContainer.innerHTML = "";
+  diagramContainer.appendChild(svg);
   diagramContainer.classList.add("ready");
-  bindDiagramNodeEvents();
 }
 
 function renderSearchResults(applications) {
@@ -365,10 +389,22 @@ function renderSearchResults(applications) {
 
   applications.forEach((app) => {
     const item = document.createElement("li");
+    item.style.cursor = "pointer";
     item.innerHTML = `
       <a href="/applications/${app.id}">${app.name}</a>
       <p>${app.domain} - ${app.short_description}</p>
     `;
+    
+    // Add click handler to select in diagram
+    item.addEventListener("click", (e) => {
+      if (e.target.tagName !== "A") {
+        e.preventDefault();
+        // Select the application in the diagram
+        renderSelectedApplication(app.id);
+        renderGraph(currentGraphData, app.id);
+      }
+    });
+    
     searchResults.appendChild(item);
   });
 }
@@ -423,11 +459,11 @@ async function initDiagram() {
     const details = await Promise.all(summaries.map((summary) => fetchApplicationDetail(summary.id)));
     details.forEach((app) => appById.set(app.id, app));
 
-    await renderMermaidArchitecture(details, relationships);
+    currentGraphData = buildGraphData(details, relationships);
+    renderGraph(currentGraphData, details[0]?.id || null);
 
     if (details.length) {
       renderSelectedApplication(details[0].id);
-      highlightSelectedNode();
     }
 
     renderSearchResults(summaries);
@@ -435,7 +471,7 @@ async function initDiagram() {
     diagramContainer.classList.remove("ready");
     diagramContainer.innerHTML = "";
     diagramFallback.style.display = "grid";
-    diagramFallback.innerHTML = `<h3>Unable to render Mermaid diagram</h3><p class=\"error\">${error.message}</p>`;
+    diagramFallback.innerHTML = `<h3>Unable to render architecture diagram</h3><p class="error">${error.message}</p>`;
   }
 }
 
